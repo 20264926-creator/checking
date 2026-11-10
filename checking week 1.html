@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Traffic & Hazard Tracker</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #0284c7;
+            --background-color: #0f172a;
+            --surface-color: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --font-family-base: system-ui, -apple-system, sans-serif;
+
+
+            /* Danger Variables */
+            --danger-bg: rgba(220, 38, 38, 0.15);
+            --danger-border: #dc2626;
+            --danger-text: #fca5a5;
+
+
+            /* Warning Variables */
+            --warning-bg: rgba(217, 119, 6, 0.15);
+            --warning-border: #f59e0b;
+            --warning-text: #fbbf24;
+
+
+            /* Success Variables */
+            --success-bg: rgba(16, 185, 129, 0.15);
+            --success-border: #10b981;
+            --success-text: #34d399;
+        }
+
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        body {
+            font-family: var(--font-family-base);
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+
+        /* Animated Rain Overlay */
+        .rain-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+
+        .drop {
+            position: absolute;
+            background: linear-gradient(transparent, rgba(56, 189, 248, 0.6));
+            width: 1px;
+            height: 25px;
+            opacity: 0.7;
+            animation: fall 0.8s linear infinite;
+        }
+
+
+        @keyframes fall {
+            0% { transform: translateY(-30px); }
+            100% { transform: translateY(100vh); }
+        }
+
+
+        header {
+            background-color: var(--primary-color);
+            color: #fff;
+            padding: 1.25rem 2rem;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+
+        .app-logo {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #1d4ed8, #60a5fa);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 0 12px rgba(96, 165, 250, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+
+        .btn {
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+
+        .btn-primary { background-color: var(--secondary-color); color: white; }
+        .btn-primary:hover { background-color: #0369a1; }
+        .btn-success { background-color: var(--success-border); color: white; }
+        .btn-success:hover { background-color: #059669; }
+        .btn:active { transform: scale(0.97); }
+
+
+        .weather-banner {
+            background: linear-gradient(90deg, #1e1b4b, #312e81);
+            border: 1px solid #6366f1;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+
+
+        .weather-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+
+        .weather-icon {
+            font-size: 1.8rem;
+        }
+
+
+        .status-box {
+            background-color: #1e293b;
+            border-left: 4px solid var(--secondary-color);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+
+        .counter-box { font-weight: 600; color: #38bdf8; }
+
+
+        .radar-box {
+            background: rgba(2, 132, 199, 0.08);
+            border: 1px dashed var(--secondary-color);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+
+        .controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+
+        .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+
+        .filter-btn {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+
+        .filter-btn.active, .filter-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+
+        .search-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            outline: none;
+            width: 220px;
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+
+        .cards-grid { 
+            display: grid; 
+            gap: 1rem; 
+            position: relative;
+            z-index: 2;
+        }
+
+
+        .card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            padding-bottom: 1.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: var(--secondary-color);
+        }
+
+
+        .lane-track {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border-top: 1px dashed rgba(255, 255, 255, 0.15);
+            pointer-events: none;
+        }
+
+
+        .car {
+            position: absolute;
+            bottom: 2px;
+            width: 28px;
+            height: 10px;
+            border-radius: 3px 6px 2px 2px;
+        }
+
+
+        .car::after {
+            content: '';
+            position: absolute;
+            top: -4px; left: 7px; width: 13px; height: 5px;
+            background: inherit; border-radius: 3px 3px 0 0; filter: brightness(1.2);
+        }
+
+
+        .car-danger { background: var(--danger-border); box-shadow: 0 0 10px var(--danger-border); animation: drive 8s infinite linear; }
+        .car-warning { background: var(--warning-border); box-shadow: 0 0 10px var(--warning-border); animation: drive 5s infinite linear; }
+        .car-success { background: var(--success-border); box-shadow: 0 0 10px var(--success-border); animation: drive 2s infinite linear; }
+
+
+        @keyframes drive { 0% { left: -40px; } 100% { left: 100%; } }
+
+
+        .card-info h3 { font-size: 1.1rem; margin-bottom: 0.25rem; color: #f8fafc; pointer-events: none; }
+        .card-info p { font-size: 0.9rem; color: var(--text-secondary); pointer-events: none; }
+
+
+        .badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+
+        .badge-danger { background-color: var(--danger-bg); color: var(--danger-text); border: 1px solid var(--danger-border); }
+        .badge-warning { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-border); }
+        .badge-success { background-color: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+        .badge-rain { background-color: #1e1b4b; color: #a5b4fc; border: 1px solid #6366f1; }
+
+
+        /* Modal Overlay Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+
+        .modal {
+            background: var(--surface-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+
+        .modal-body p { margin-bottom: 0.75rem; font-size: 0.95rem; line-height: 1.5; }
+        .modal-footer { margin-top: 1.5rem; text-align: right; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); }
+
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.25rem; font-size: 0.9rem; font-weight: 600; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;
+            background-color: var(--background-color); color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="rain-container" id="rain"></div>
+
+
+    <header>
+        <div class="header-brand">
+            <div class="app-logo">🚥</div>
+            <div>
+                <h1>Real-Time Traffic & Hazard Tracker</h1>
+                <p style="font-size: 0.85rem; opacity: 0.9;">Live road flow & natural phenomena alerts</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-success" id="addIncidentBtn">+ Report Alert</button>
+            <button class="btn btn-primary" id="refreshBtn">🔄 Refresh Data</button>
+        </div>
+    </header>
+
+
+    <div class="weather-banner">
+        <div class="weather-info">
+            <span class="weather-icon">🌧️</span>
+            <div>
+                <h3 style="font-size: 1rem; color: #e0e7ff;">Weather Warning: Heavy Rain Approaching</h3>
+                <p style="font-size: 0.85rem; color: #a5b4fc;">Precipitation probability: 85% • Expect wet, slippery roads within 15–20 mins</p>
+            </div>
+        </div>
+        <span class="badge badge-rain">Rain Alert</span>
+    </div>
+
+
+    <div class="radar-box">
+        <p style="font-size: 0.85rem; color: #38bdf8;">📡 Active Telemetry & Doppler Radar • Click any route below to open live incident details</p>
+    </div>
+
+
+    <div class="status-box">
+        <span id="statusText">System Operational • Monitoring live traffic flow</span>
+        <span class="counter-box" id="incidentCount">Active Incidents: 3</span>
+    </div>
+
+
+    <div class="controls-bar">
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">All Alerts</button>
+            <button class="filter-btn" data-filter="danger">Heavy Traffic</button>
+            <button class="filter-btn" data-filter="warning">Road Works</button>
+            <button class="filter-btn" data-filter="success">Clear Routes</button>
+        </div>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search route or road...">
+    </div>
+
+
+    <div class="cards-grid" id="trafficFeed"></div>
+
+
+    <!-- Detail Modal Popup -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Location Title</h3>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Status:</strong> <span id="modalStatus"></span></p>
+                <p><strong>Average Speed:</strong> <span id="modalSpeed"></span></p>
+                <p><strong>Sub-location:</strong> <span id="modalSub"></span></p>
+                <p style="margin-top:0.5rem;"><strong>Incident Description:</strong></p>
+                <p id="modalDesc" style="color: var(--text-secondary);"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="closeModalFooterBtn">Close Window</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Add Report Modal -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Report Traffic Alert</h3>
+                <button class="close-btn" id="closeAddModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="incidentForm">
+                    <div class="form-group">
+                        <label>Location / Expressway</label>
+                        <input type="text" id="inputLocation" required placeholder="e.g. McArthur Highway">
+                    </div>
+                    <div class="form-group">
+                        <label>Sub-location / Landmark</label>
+                        <input type="text" id="inputSub" required placeholder="e.g. Near University Gate">
+                    </div>
+                    <div class="form-group">
+                        <label>Category Severity</label>
+                        <select id="inputCategory">
+                            <option value="danger">Heavy Jam (Danger)</option>
+                            <option value="warning">Road Work (Warning)</option>
+                            <option value="success">Clear Route (Success)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Average Speed</label>
+                        <input type="text" id="inputSpeed" required placeholder="e.g. 15 km/h">
+                    </div>
+                    <div class="form-group">
+                        <label>Details</label>
+                        <textarea id="inputDesc" rows="3" required placeholder="Describe congestion..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn" id="cancelAddModalBtn">Cancel</button>
+                        <button type="submit" class="btn btn-success">Submit Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        let trafficData = [
+            {
+                id: 1,
+                location: 'Main Avenue Expressway',
+                sub: 'Near Exit 4 • Speed: 12 km/h (Reduced vision)',
+                category: 'danger',
+                badgeText: 'Heavy Jam',
+                speed: '12 km/h',
+                desc: 'Heavy congestion due to emergency lane repairs and low visibility from rain. Avoid this corridor if possible.'
+            },
+            {
+                id: 2,
+                location: 'Session Road Interchange',
+                sub: 'Northbound Lane • Speed: 28 km/h (Caution)',
+                category: 'warning',
+                badgeText: 'Road Work',
+                speed: '28 km/h',
+                desc: 'Resurfacing work underway. Wet surface caution advised. Speeds restricted to 28 km/h.'
+            },
+            {
+                id: 3,
+                location: 'Bypass Highway South',
+                sub: 'Kilometer 12 to 24 • Speed: 65 km/h (Normal Flow)',
+                category: 'success',
+                badgeText: 'Clear Route',
+                speed: '65 km/h',
+                desc: 'Traffic flowing smoothly at normal cruising speeds. No hazards or delays reported.'
+            }
+        ];
+
+
+        let currentFilter = 'all';
+
+
+        function renderCards() {
+            const container = document.getElementById('trafficFeed');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            container.innerHTML = '';
+
+
+            const filteredData = trafficData.filter(item => {
+                const matchesFilter = (currentFilter === 'all') || (item.category === currentFilter);
+                const matchesSearch = item.location.toLowerCase().includes(searchVal) || item.sub.toLowerCase().includes(searchVal);
+                return matchesFilter && matchesSearch;
+            });
+
+
+            filteredData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.addEventListener('click', () => openModal(item.location, item.badgeText, item.speed, item.sub, item.desc));
+
+
+                card.innerHTML = `
+                    <div class="card-info">
+                        <h3>${item.location}</h3>
+                        <p>${item.sub}</p>
+                    </div>
+                    <span class="badge badge-${item.category}">${item.badgeText}</span>
+                    <div class="lane-track">
+                        <div class="car car-${item.category}"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+
+            document.getElementById('incidentCount').textContent = 'Active Incidents: ' + trafficData.length;
+        }
+
+
+        function openModal(title, status, speed, sub, desc) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalStatus').textContent = status;
+            document.getElementById('modalSpeed').textContent = speed;
+            document.getElementById('modalSub').textContent = sub;
+            document.getElementById('modalDesc').textContent = desc;
+            document.getElementById('detailModal').style.display = 'flex';
+        }
+
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.getAttribute('data-filter');
+                renderCards();
+            });
+        });
+
+
+        document.getElementById('searchInput').addEventListener('input', renderCards);
+
+
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            const btn = document.getElementById('refreshBtn');
+            const statusText = document.getElementById('statusText');
+            btn.textContent = '⏳ Fetching...';
+            btn.disabled = true;
+
+
+            setTimeout(() => {
+                const now = new Date().toLocaleTimeString();
+                statusText.textContent = 'Last refreshed at ' + now + ' • Traffic feeds sync complete.';
+                btn.textContent = '🔄 Refresh Data';
+                btn.disabled = false;
+            }, 600);
+        });
+
+
+        document.getElementById('closeModalBtn').addEventListener('click', () => closeModal('detailModal'));
+        document.getElementById('closeModalFooterBtn').addEventListener('click', () => closeModal('detailModal'));
+        document.getElementById('closeAddModalBtn').addEventListener('click', () => closeModal('addModal'));
+        document.getElementById('cancelAddModalBtn').addEventListener('click', () => closeModal('addModal'));
+
+
+        document.getElementById('addIncidentBtn').addEventListener('click', () => {
+            document.getElementById('addModal').style.display = 'flex';
+        });
+
+
+        document.getElementById('incidentForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const location = document.getElementById('inputLocation').value;
+            const sub = document.getElementById('inputSub').value;
+            const category = document.getElementById('inputCategory').value;
+            const speed = document.getElementById('inputSpeed').value;
+            const desc = document.getElementById('inputDesc').value;
+
+
+            let badgeText = 'Clear Route';
+            if (category === 'danger') badgeText = 'Heavy Jam';
+            if (category === 'warning') badgeText = 'Road Work';
+
+
+            trafficData.unshift({
+                id: Date.now(),
+                location: location,
+                sub: sub + ' • Speed: ' + speed,
+                category: category,
+                badgeText: badgeText,
+                speed: speed,
+                desc: desc
+            });
+            renderCards();
+            closeModal('addModal');
+            document.getElementById('incidentForm').reset();
+        });
+
+
+        // Rain generator
+        const rainContainer = document.getElementById('rain');
+        for (let i = 0; i < 35; i++) {
+            const drop = document.createElement('div');
+            drop.className = 'drop';
+            drop.style.left = (Math.random() * 100) + '%';
+            drop.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+            drop.style.animationDelay = (Math.random() * 2) + 's';
+            rainContainer.appendChild(drop);
+        }
+
+
+        renderCards();
+    </script>
+</body>
+</html>
